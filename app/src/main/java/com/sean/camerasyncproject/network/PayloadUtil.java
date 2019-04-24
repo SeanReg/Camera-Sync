@@ -19,11 +19,29 @@ import java.util.Arrays;
 public class PayloadUtil {
     public enum Desc {
         VIDEO,
-        MEDIA_INFO;
+        MEDIA_INFO,
+        TAKE_PICTURE;
     }
 
     private PayloadUtil() {
 
+    }
+
+    public static Payload encodeTakePicture(boolean useFlash) {
+        ByteBuffer buffer = ByteBuffer.allocate(5);
+
+        buffer.putInt(Desc.TAKE_PICTURE.ordinal());
+        if (useFlash) {
+            buffer.put((byte) 1);
+        } else {
+            buffer.put((byte) 0);
+        }
+
+        return Payload.fromBytes(buffer.array());
+    }
+
+    public static Payload decodeTakePicture() {
+        return null;
     }
 
     public static Payload encodeFormatPayload(MediaFormat format) {

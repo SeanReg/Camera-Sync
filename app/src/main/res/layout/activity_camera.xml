@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    tools:context=".camera.CameraActivity">
+    tools:context=".camera.HostCameraActivity">
 
     <ImageView
         android:layout_width="fill_parent"

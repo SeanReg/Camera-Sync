@@ -6,17 +6,14 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 
-import com.sean.camerasyncproject.camera.CameraActivity;
+import com.sean.camerasyncproject.camera.HostCameraActivity;
 import com.sean.camerasyncproject.camera.RemoteCameraActivity;
-import com.sean.camerasyncproject.encoding.H264SurfaceEncoder;
-import com.sean.camerasyncproject.encoding.Transcoder;
 import com.sean.camerasyncproject.network.Client;
 import com.sean.camerasyncproject.network.ConnectionBroadcaster;
 import com.sean.camerasyncproject.network.ConnectionDiscovery;
 import com.sean.camerasyncproject.network.DiscoveryService;
 import com.sean.camerasyncproject.network.Session;
 
-import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Random;
 
@@ -81,8 +78,8 @@ public class MainActivity extends AppCompatActivity {
             Session session = service.createActiveSession();
 
             if (service instanceof ConnectionBroadcaster) {
-                CameraActivity.setSession(session);
-                startActivity(new Intent(getApplicationContext(), CameraActivity.class));
+                HostCameraActivity.setSession(session);
+                startActivity(new Intent(getApplicationContext(), HostCameraActivity.class));
             } else {
                 startActivity(new Intent(getApplicationContext(), RemoteCameraActivity.class));
             }

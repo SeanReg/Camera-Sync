@@ -6,6 +6,7 @@ import android.media.MediaFormat;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Pair;
+import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
 
@@ -15,14 +16,13 @@ import com.sean.camerasyncproject.encoding.H264Decoder;
 import com.sean.camerasyncproject.network.PayloadUtil;
 
 import java.io.IOException;
+import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * Created by Sean on 3/14/2019.
  */
 
-public class RemoteCameraActivity extends AppCompatActivity {
-
-    private TextureView mCameraView = null;
+public class RemoteCameraActivity extends CameraActivity {
 
     private H264Decoder mDecoder = null;
 
@@ -34,12 +34,14 @@ public class RemoteCameraActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_camera);
 
         mInstance = this;
+    }
 
-        mCameraView = (TextureView)findViewById(R.id.cameraView);
-        mCameraView.setSurfaceTextureListener(mCameraSurfaceListener);
+    @Override
+    protected void onTextureReady() {
+        mSurfaceReady = true;
+        startVideoDecoder();
     }
 
     @Override
@@ -58,6 +60,8 @@ public class RemoteCameraActivity extends AppCompatActivity {
     public void test(Payload videoData) {
         if (PayloadUtil.getPayloadType(videoData) == PayloadUtil.Desc.MEDIA_INFO) {
             mFormat = PayloadUtil.decodeFormatPayload(videoData);
+
+            //fixViewAspect(mCameraView, new Size(mFormat.getInteger(MediaFormat.KEY_WIDTH), mFormat.getInteger(MediaFormat.KEY_HEIGHT)));
             startVideoDecoder();
             return;
         }
@@ -81,28 +85,4 @@ public class RemoteCameraActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-
-    private TextureView.SurfaceTextureListener mCameraSurfaceListener = new TextureView.SurfaceTextureListener() {
-        @Override
-        public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-            mSurfaceReady = true;
-            startVideoDecoder();
-        }
-
-        @Override
-        public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-
-        }
-
-        @Override
-        public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-            mSurfaceReady = false;
-            return false;
-        }
-
-        @Override
-        public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-
-        }
-    };
 }
