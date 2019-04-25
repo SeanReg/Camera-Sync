@@ -42,8 +42,6 @@ import java.io.IOException;
  */
 public class HostCameraActivity extends CameraActivity {
 
-    private PermissionRequester mPermission    = null;
-
     private CameraCharacterizer.CameraType mCameraType = CameraCharacterizer.CameraType.BACK_CAMERA;
 
     private H264SurfaceEncoder mEncoder = null;
@@ -112,33 +110,11 @@ public class HostCameraActivity extends CameraActivity {
         try {
             camHandler.openCamera(manager, cameraType);
         } catch (SecurityException e) {
-            //Need to request permissions again
-            mPermission = new PermissionRequester(this);
-            mPermission.setResultListener(mCameraPermissionListener);
-            mPermission.requestPermission(Manifest.permission.CAMERA);
+
         } catch (CameraAccessException e2) {
 
         }
     }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
-        mPermission.onPermissionResult(requestCode, permissions, grantResults);
-    }
-
-    private PermissionRequester.ResultListener mCameraPermissionListener = new PermissionRequester.ResultListener() {
-        @Override
-        public void onAccessGranted(String permission) {
-            //Camera granted - redo connection
-            startCamera(mCameraType);
-        }
-
-        @Override
-        public void onAccessDenied(String permission) {
-            //User doesn't want to use their camera - leave activity
-            finish();
-        }
-    };
 
     private CameraHandle.CameraStatusCallback mCameraStatus = new CameraHandle.CameraStatusCallback() {
         @Override
