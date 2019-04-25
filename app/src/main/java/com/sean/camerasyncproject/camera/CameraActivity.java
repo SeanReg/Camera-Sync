@@ -36,6 +36,14 @@ public abstract class CameraActivity extends AppCompatActivity {
         mFlashButton = (ToggleButton)findViewById(R.id.flashButton);
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        if (mCameraView.getSurfaceTexture() != null)
+            onTextureReady();
+    }
+
     protected boolean screenIsLandscape() {
         return (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE);
     }

@@ -1,8 +1,10 @@
 package com.sean.camerasyncproject.camera;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -17,6 +19,7 @@ import android.os.HandlerThread;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.Surface;
+import android.view.WindowManager;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -48,6 +51,8 @@ public class CameraHandle {
 
     //Callback listners
     private CameraStatusCallback  mCameraStatsListener = null;
+
+    private int mImageOrientation = 0;
 
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
     static {
@@ -142,7 +147,7 @@ public class CameraHandle {
 
         try {
             //Create an image reader for still capturing
-            Size resolution = mCharacterizer.getMinFitResolution(MAX_CAPTURE_SIZE); //mCharacterizer.getMaxResolution(ImageFormat.JPEG);
+            Size resolution = mCharacterizer.getMaxResolution(CameraCharacterizer.Format.JPEG);
             mImageReader = ImageReader.newInstance(resolution.getWidth(), resolution.getHeight(), ImageFormat.JPEG, 2);
             mImageReader.setOnImageAvailableListener(mImageReaderListener, null);
 
@@ -180,7 +185,7 @@ public class CameraHandle {
      * @throws IllegalStateException thrown when the camera feed has not been started. Also thrown if a CameraStatusListener has not been registered for the CameraHandle
      * @throws CameraAccessException thrown if there was an error with opening the camera device
      */
-    public void captureImage(boolean useFlash) throws IllegalStateException, CameraAccessException {
+    public void captureImage(WindowManager manager, boolean useFlash) throws IllegalStateException, CameraAccessException {
         if (mCaptureSession == null) throw new IllegalStateException("Camera feed has not been started!");
         if (mCameraStatsListener == null) throw new IllegalStateException("CameraStatusListener has not been registered");
 
@@ -196,16 +201,40 @@ public class CameraHandle {
             } else  {
                 request.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF);
             }
-            request.set(CaptureRequest.JPEG_ORIENTATION, mCharacterizer.getCameraOrientation());
+            mImageOrientation = getJpegOrientation(ORIENTATIONS.get(manager.getDefaultDisplay().getRotation()));
+            //request.set(CaptureRequest.JPEG_ORIENTATION, getJpegOrientation(ORIENTATIONS.get(manager.getDefaultDisplay().getRotation())));
 
             //Stop old preview request and do capture request
-            mCaptureSession.stopRepeating();
-            mCaptureSession.capture(request.build(), mCapturedListener, null);
+            //mCaptureSession.stopRepeating();
+            mCaptureSession.capture(request.build(), null, null);
         } catch(CameraAccessException e) {
             //Stop the camera and notify the caller
             stop();
             throw e;
         }
+    }
+
+    /**
+     * Computes the correct orientation of an image results from the camera sensor
+     * @param deviceOrientation orientation of the device
+     * @return orientation of the image
+     */
+    private int getJpegOrientation(int deviceOrientation) {
+        if (deviceOrientation == android.view.OrientationEventListener.ORIENTATION_UNKNOWN) return 0;
+        int sensorOrientation = mCharacterizer.getCameraOrientation();
+
+        // Round device orientation to a multiple of 90
+        deviceOrientation = (deviceOrientation + 45) / 90 * 90;
+
+        // Reverse device orientation for front-facing cameras
+        boolean facingFront = mCharacterizer.getFacingFront();
+        if (facingFront) deviceOrientation = -deviceOrientation;
+
+        // Calculate desired JPEG orientation relative to camera orientation to make
+        // the image upright relative to the device orientation
+        int jpegOrientation = (sensorOrientation + deviceOrientation + 360) % 360;
+
+        return jpegOrientation;
     }
 
     /**
@@ -330,8 +359,6 @@ public class CameraHandle {
             }
 
             capture.close();
-
-            stop();
         }
     };
 
@@ -343,7 +370,11 @@ public class CameraHandle {
             ByteBuffer buffer = image.getPlanes()[0].getBuffer();
             byte[] jpegByteData = new byte[buffer.remaining()];
             buffer.get(jpegByteData);
-            bmp = BitmapFactory.decodeByteArray(jpegByteData, 0, jpegByteData.length, null);
+            Bitmap decodedBmp = BitmapFactory.decodeByteArray(jpegByteData, 0, jpegByteData.length, null);
+            Matrix matrix = new Matrix();
+            matrix.postRotate(mImageOrientation);
+            bmp = Bitmap.createBitmap(decodedBmp, 0, 0, decodedBmp.getWidth(), decodedBmp.getHeight(), matrix, false);
+            decodedBmp.recycle();
         } else {
             //Multi-planar image formats are mor complicated
             final Image.Plane[] planes = image.getPlanes();

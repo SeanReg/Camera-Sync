@@ -31,6 +31,7 @@ public abstract class Transcoder<T> {
         mSync = sync;
     }
 
+    public abstract boolean isRunning();
     public abstract T start() throws IOException;
     public abstract void putData(byte[] data, MediaCodec.BufferInfo info);
     public abstract void stop();

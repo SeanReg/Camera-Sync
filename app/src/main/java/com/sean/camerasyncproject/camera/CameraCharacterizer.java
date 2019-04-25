@@ -227,6 +227,16 @@ public class CameraCharacterizer {
         return bestFit;
     }
 
+    public boolean getFacingFront() {
+        CameraCharacteristics characteristics = null;
+        try {
+            characteristics = mCameraManager.getCameraCharacteristics(mCurCameraId);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+        return (characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT);
+    }
+
     /**
      * Gets a list of resolutions supported for the specified imageFormat
      *

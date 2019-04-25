@@ -20,11 +20,18 @@ public class PayloadUtil {
     public enum Desc {
         VIDEO,
         MEDIA_INFO,
-        TAKE_PICTURE;
+        TAKE_PICTURE,
+        SWITCH_CAMERA;
     }
 
     private PayloadUtil() {
 
+    }
+
+    public static Payload encodeSwitchCamera() {
+        ByteBuffer buffer = ByteBuffer.allocate(4);
+        buffer.putInt(Desc.SWITCH_CAMERA.ordinal());
+        return Payload.fromBytes(buffer.array());
     }
 
     public static Payload encodeTakePicture(boolean useFlash) {
@@ -40,8 +47,12 @@ public class PayloadUtil {
         return Payload.fromBytes(buffer.array());
     }
 
-    public static Payload decodeTakePicture() {
-        return null;
+    public static boolean decodeTakePicture(Payload payload) {
+        ByteBuffer buffer = ByteBuffer.wrap(payload.asBytes());
+
+        checkCorrectDesc(buffer, Desc.TAKE_PICTURE);
+
+        return (buffer.get() == 1);
     }
 
     public static Payload encodeFormatPayload(MediaFormat format) {

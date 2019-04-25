@@ -23,6 +23,8 @@ public class H264SurfaceEncoder extends Transcoder<Surface> {
 
     private MediaCodec mMediaCodec = null;
 
+    private Surface mEncoderService = null;
+
     public H264SurfaceEncoder(Sync sync, int width, int height, int fps, int bitrate, int rotation) {
         super(sync);
 
@@ -39,6 +41,11 @@ public class H264SurfaceEncoder extends Transcoder<Surface> {
     }
 
     @Override
+    public boolean isRunning() {
+        return (mMediaCodec != null);
+    }
+
+    @Override
     public Surface start() throws IOException {
         if (mMediaCodec != null)
             throw new IllegalStateException("Encoder is already running!");
@@ -47,11 +54,15 @@ public class H264SurfaceEncoder extends Transcoder<Surface> {
         mMediaCodec.configure(mMediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
 
 
-        Surface surface = mMediaCodec.createInputSurface();
+        mEncoderService = mMediaCodec.createInputSurface();
         mMediaCodec.setCallback(mCallback);
         mMediaCodec.start();
 
-        return surface;
+        return mEncoderService;
+    }
+
+    public Surface getSurface() {
+        return mEncoderService;
     }
 
     @Override

@@ -29,12 +29,11 @@ public class H264Decoder extends Transcoder {
 
         mRenderSurface = surface;
         mMediaFormat = format;
-//        mMediaFormat = MediaFormat.createVideoFormat(VIDEO_TRANSCODER_TYPE, width, height);
-//        mMediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
-//        mMediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, fps);
-//        mMediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
-//        mMediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
-//        mMediaFormat.setInteger(MediaFormat.KEY_ROTATION, -90);
+    }
+
+    @Override
+    public boolean isRunning() {
+        return (mDecoder != null);
     }
 
     @Override

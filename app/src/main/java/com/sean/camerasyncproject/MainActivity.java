@@ -8,7 +8,6 @@ import android.view.View;
 
 import com.sean.camerasyncproject.camera.HostCameraActivity;
 import com.sean.camerasyncproject.camera.RemoteCameraActivity;
-import com.sean.camerasyncproject.network.Client;
 import com.sean.camerasyncproject.network.ConnectionBroadcaster;
 import com.sean.camerasyncproject.network.ConnectionDiscovery;
 import com.sean.camerasyncproject.network.DiscoveryService;
@@ -55,6 +54,17 @@ public class MainActivity extends AppCompatActivity {
         //startActivity(new Intent(this, CameraActivity.class));
     }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        if (mDiscovery != null && mDiscovery.isActive()) {
+            mDiscovery.stop();
+        }
+
+        mDiscovery = null;
+    }
+
     private final DiscoveryService.StatusListener mListener = new DiscoveryService.StatusListener() {
         @Override
         public void onDiscoveryStart(DiscoveryService service) {
@@ -67,18 +77,18 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public boolean onConnectionDiscovered(DiscoveryService service, Client client) {
+        public boolean onConnectionDiscovered(DiscoveryService service, Session.Client client) {
             Log.d(MainActivity.class.getSimpleName(), "Found client " + client.getId());
             return true;
         }
 
         @Override
-        public void onConnectionAccepted(DiscoveryService service, Client client) {
-            service.stop();
+        public void onConnectionAccepted(DiscoveryService service, Session.Client client) {
+            mDiscovery.stop();
+
             Session session = service.createActiveSession();
 
             if (service instanceof ConnectionBroadcaster) {
-                HostCameraActivity.setSession(session);
                 startActivity(new Intent(getApplicationContext(), HostCameraActivity.class));
             } else {
                 startActivity(new Intent(getApplicationContext(), RemoteCameraActivity.class));

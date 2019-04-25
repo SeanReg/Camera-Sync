@@ -10,9 +10,11 @@ import android.graphics.Camera;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
+import android.media.CamcorderProfile;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.util.Size;
@@ -22,9 +24,11 @@ import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ToggleButton;
 
+import com.google.android.gms.nearby.connection.Payload;
 import com.sean.camerasyncproject.R;
 import com.sean.camerasyncproject.encoding.H264SurfaceEncoder;
 import com.sean.camerasyncproject.encoding.Transcoder;
+import com.sean.camerasyncproject.network.MessageListener;
 import com.sean.camerasyncproject.network.PayloadUtil;
 import com.sean.camerasyncproject.network.Session;
 import com.sean.camerasyncproject.permissions.PermissionRequester;
@@ -40,11 +44,9 @@ public class HostCameraActivity extends CameraActivity {
 
     private PermissionRequester mPermission    = null;
 
-    private CameraCharacterizer.CameraType mCameraType    = CameraCharacterizer.CameraType.FRONT_CAMERA;
+    private CameraCharacterizer.CameraType mCameraType = CameraCharacterizer.CameraType.BACK_CAMERA;
 
     private H264SurfaceEncoder mEncoder = null;
-
-    private static Session mActiveSession = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,8 +55,29 @@ public class HostCameraActivity extends CameraActivity {
         mCaptureButton.setOnClickListener(mCaptureListener);
         mSwitchCamera.setOnClickListener(mSwitchCameraListener);
 
-        mEncoder = new H264SurfaceEncoder(mEncoderSync, 1280, 720, 30, 2000000, -90);
-        mActiveSession.broadcastToClients(PayloadUtil.encodeFormatPayload(mEncoder.getFormat()));
+        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_480P);
+        mEncoder = new H264SurfaceEncoder(mEncoderSync, profile.videoFrameWidth, profile.videoFrameHeight, profile.videoFrameRate, 1000000, 0);
+        Session.getActiveSession().broadcastToClients(HostCameraActivity.this, PayloadUtil.encodeFormatPayload(mEncoder.getFormat()));
+
+        Session.getActiveSession().addMessageListener(PayloadUtil.Desc.TAKE_PICTURE, new MessageListener() {
+            @Override
+            public void onMessageReceived(Session.Client sender, Payload msg) {
+                mFlashButton.setChecked(PayloadUtil.decodeTakePicture(msg));
+                mCaptureButton.callOnClick();
+            }
+        });
+
+        Session.getActiveSession().addMessageListener(PayloadUtil.Desc.SWITCH_CAMERA, new MessageListener() {
+            @Override
+            public void onMessageReceived(Session.Client sender, Payload msg) {
+                mSwitchCamera.callOnClick();
+            }
+        });
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
     }
 
     @Override
@@ -65,7 +88,7 @@ public class HostCameraActivity extends CameraActivity {
     private final Transcoder.Sync mEncoderSync = new Transcoder.Sync() {
         @Override
         public void onBufferAvailable(byte[] data, MediaCodec.BufferInfo info) {
-            mActiveSession.broadcastToClients(PayloadUtil.encodeVideoPayload(data, info));
+            Session.getActiveSession().broadcastToClients(HostCameraActivity.this, PayloadUtil.encodeVideoPayload(data, info));
         }
     };
 
@@ -117,10 +140,6 @@ public class HostCameraActivity extends CameraActivity {
         }
     };
 
-    public static void setSession(Session session) {
-        mActiveSession = session;
-    }
-
     private CameraHandle.CameraStatusCallback mCameraStatus = new CameraHandle.CameraStatusCallback() {
         @Override
         public void onConnected() {
@@ -129,8 +148,10 @@ public class HostCameraActivity extends CameraActivity {
             //Start the camera preview feed
             try {
                 Surface previewSurface = new Surface(mCameraView.getSurfaceTexture());
-                camHandler.startFeed(previewSurface,  mEncoder.start());
 
+                if (!mEncoder.isRunning())
+                    mEncoder.start();
+                camHandler.startFeed(previewSurface,  mEncoder.getSurface());
 
                 Size previewSize = new Size(mCameraView.getWidth(), mCameraView.getHeight());
                 if (!screenIsLandscape()) {
@@ -153,25 +174,19 @@ public class HostCameraActivity extends CameraActivity {
         @Override
         public void onImageCaptured(Bitmap capturedImage) {
             Log.d("CameraActivity", "Got image from ImageReader");
-            //mCameraView.setVisibility(View.INVISIBLE);
 
-            ContextWrapper cw = new ContextWrapper(getApplicationContext());
-            File directory = cw.getDir("bitmap", Context.MODE_PRIVATE);
-            if (!directory.exists()) {
-                directory.mkdir();
-            }
+            MediaStore.Images.Media.insertImage(getContentResolver(), capturedImage, "", "");  // Saves the image.
 
-            FileOutputStream fStream = null;
-            File filePath = null;
-            try {
-                filePath = File.createTempFile("bitmap", ".png", directory);
-                fStream = new FileOutputStream(filePath);
-                capturedImage.compress(Bitmap.CompressFormat.JPEG, 100, fStream);
-                fStream.close();
-            } catch (IOException e) {
-
-            }
-
+//            FileOutputStream fStream = null;
+//            File filePath = null;
+//            try {
+//                filePath = File.createTempFile("bitmap", ".png", directory);
+//                fStream = new FileOutputStream(filePath);
+//                capturedImage.compress(Bitmap.CompressFormat.JPEG, 100, fStream);
+//                fStream.close();
+//            } catch (IOException e) {
+//
+//            }
         }
     };
 
@@ -179,7 +194,7 @@ public class HostCameraActivity extends CameraActivity {
         @Override
         public void onClick(View v) {
             try {
-                CameraHandle.getInstance().captureImage(mFlashButton.isChecked());
+                CameraHandle.getInstance().captureImage(getWindowManager(), mFlashButton.isChecked());
             }catch (CameraAccessException e) {
                 finish();
             }
