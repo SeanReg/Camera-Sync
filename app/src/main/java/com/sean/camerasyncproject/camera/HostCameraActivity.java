@@ -56,7 +56,7 @@ public class HostCameraActivity extends CameraActivity {
         mSwitchCamera.setOnClickListener(mSwitchCameraListener);
 
         CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_480P);
-        mEncoder = new H264SurfaceEncoder(mEncoderSync, profile.videoFrameWidth, profile.videoFrameHeight, profile.videoFrameRate, 1000000, 0);
+        mEncoder = new H264SurfaceEncoder(mEncoderSync, profile.videoFrameWidth, profile.videoFrameHeight, profile.videoFrameRate, 1000000, 90);
         Session.getActiveSession().broadcastToClients(HostCameraActivity.this, PayloadUtil.encodeFormatPayload(mEncoder.getFormat()));
 
         Session.getActiveSession().addMessageListener(PayloadUtil.Desc.TAKE_PICTURE, new MessageListener() {
